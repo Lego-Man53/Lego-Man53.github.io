@@ -1,66 +1,119 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Lego Man | Developer</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: white;
-    }
-    header {
-      text-align: center;
-      padding: 60px 20px;
-    }
-    h1 {
-      font-size: 3rem;
-    }
-    .projects {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 20px;
-      padding: 40px;
-    }
-    .card {
-      background: #1e293b;
-      padding: 20px;
-      border-radius: 12px;
-      transition: 0.3s;
-    }
-    .card:hover {
-      transform: translateY(-5px);
-    }
-    a {
-      color: #38bdf8;
-      text-decoration: none;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Lego Man</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root {
+  --bg: #0a0d12;
+  --card: #11161c;
+  --text: #f0f6fc;
+  --muted: #8b949e;
+  --accent: #4f9cff;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.container {
+  max-width: 1100px;
+  margin: auto;
+  padding: 40px 20px;
+}
+
+h1 {
+  font-size: 2.2rem;
+  margin-bottom: 30px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.app {
+  background: var(--card);
+  border-radius: 18px;
+  padding: 18px;
+  transition: 0.2s;
+}
+
+.app:hover {
+  transform: translateY(-4px);
+}
+
+.icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
+  background: #1f2937;
+  margin-bottom: 12px;
+}
+
+.title {
+  font-weight: 600;
+}
+
+.desc {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 6px 0 14px;
+}
+
+.button {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: white;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+footer {
+  margin-top: 60px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+</style>
 </head>
 
 <body>
 
-<header>
-  <h1>Lego Man</h1>
-  <p>I build apps & games</p>
-</header>
+<div class="container">
 
-<section class="projects">
+<h1>Apps</h1>
 
-  <div class="card">
-    <h2>Flappy Car 🚗</h2>
-    <p>A car version of Flappy Bird</p>
-    <a href="/flappycar">Play →</a>
+<div class="grid">
+
+  <div class="app">
+    <div class="icon"></div>
+    <div class="title">Flappy Car</div>
+    <div class="desc">A car-based Flappy Bird game</div>
+    <a class="button" href="/flappycar">Open</a>
   </div>
-  <div class="card">
-    <h2>iOS TimeTable 📅</h2>
-    <p>A schedule management app for iOS</p>
-    <a href="/timetable">View →</a>
+
+  <div class="app">
+    <div class="icon"></div>
+    <div class="title">iOS TimeTable</div>
+    <div class="desc">Schedule management app</div>
+    <a class="button" href="/timetable">Open</a>
   </div>
-  
-</section>
+
+</div>
+
+<footer>
+Built by Lego Man • <a href="https://github.com/Lego-Man53">GitHub</a>
+</footer>
+
+</div>
 
 </body>
 </html>
