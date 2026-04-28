@@ -1,59 +1,123 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>iOS TimeTable App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>TimeTable</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: white;
-      text-align: center;
-      padding: 40px;
-    }
+<style>
+body {
+  margin: 0;
+  background: #0a0d12;
+  color: white;
+  font-family: -apple-system;
+}
 
-    h1 {
-      font-size: 2.5rem;
-    }
+.container {
+  max-width: 900px;
+  margin: auto;
+  padding: 30px 20px;
+}
 
-    .box {
-      background: #1e293b;
-      padding: 30px;
-      border-radius: 12px;
-      max-width: 600px;
-      margin: auto;
-    }
+.header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
 
-    a {
-      color: #38bdf8;
-      text-decoration: none;
-      display: inline-block;
-      margin-top: 15px;
-    }
-  </style>
+.icon {
+  width: 70px;
+  height: 70px;
+  border-radius: 18px;
+  background: #1f2937;
+}
+
+.title {
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.subtitle {
+  color: #8b949e;
+  font-size: 0.95rem;
+}
+
+.button {
+  margin-top: 15px;
+  display: inline-block;
+  padding: 10px 16px;
+  background: #4f9cff;
+  border-radius: 10px;
+  color: white;
+  text-decoration: none;
+}
+
+.section {
+  margin-top: 30px;
+}
+
+.preview {
+  margin-top: 20px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #1f2937;
+}
+
+iframe {
+  width: 100%;
+  height: 500px;
+  border: none;
+}
+
+a {
+  color: #4f9cff;
+}
+</style>
 </head>
 
 <body>
 
-<h1>📅 iOS TimeTable App</h1>
+<div class="container">
 
-<div class="box">
-  <p>
-    A clean iOS timetable app built using Swift.  
-    Helps organize schedules and manage daily routines.
-  </p>
-
-  <a href="https://github.com/Lego-Man53/IOS-TimeTable" target="_blank">
-    View Code on GitHub →
-  </a>
+<div class="header">
+  <div class="icon"></div>
+  <div>
+    <div class="title">TimeTable</div>
+    <div class="subtitle">A clean schedule management website</div>
+  </div>
 </div>
 
-<p style="margin-top:30px;">
-  <a href="/">← Back to Home</a>
+<a class="button" href="https://github.com/Lego-Man53/IOS-TimeTable" target="_blank">
+View Code
+</a>
+
+<div class="section">
+<h3>Live Preview</h3>
+
+<div class="preview">
+  <!-- IF you deploy this site later, replace link below -->
+  <iframe src="https://lego-man53.github.io/IOS-TimeTable/"></iframe>
+</div>
+
+</div>
+
+<div class="section">
+<h3>About</h3>
+<p>
+A simple and clean timetable web app to manage daily schedules and stay organized.
 </p>
+</div>
+
+<div class="section">
+<h3>Tech</h3>
+<p>HTML • CSS • JavaScript</p>
+</div>
+
+<div class="section">
+<a href="/">← Back to Apps</a>
+</div>
+
+</div>
 
 </body>
 </html>
