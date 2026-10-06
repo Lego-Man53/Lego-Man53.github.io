@@ -1,122 +1,66 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Lego Man</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<style>
-:root {
-  --bg: #f5f7fa;
-  --card: #ffffff;
-  --text: #0f172a;
-  --muted: #6b7280;
-  --accent: #2563eb;
-  --border: #e5e7eb;
-}
-
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
-  background: var(--bg);
-  color: var(--text);
-}
-
-.container {
-  max-width: 1100px;
-  margin: auto;
-  padding: 40px 20px;
-}
-
-h1 {
-  font-size: 2.2rem;
-  margin-bottom: 30px;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 20px;
-}
-
-.app {
-  background: var(--card);
-  border-radius: 18px;
-  padding: 18px;
-  border: 1px solid var(--border);
-  transition: 0.2s;
-}
-
-.app:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.05);
-}
-
-.icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 14px;
-  background: #e5e7eb;
-  margin-bottom: 12px;
-}
-
-.title {
-  font-weight: 600;
-}
-
-.desc {
-  color: var(--muted);
-  font-size: 0.9rem;
-  margin: 6px 0 14px;
-}
-
-.button {
-  display: inline-block;
-  padding: 8px 14px;
-  border-radius: 10px;
-  background: var(--accent);
-  color: white;
-  text-decoration: none;
-  font-size: 0.9rem;
-}
-
-footer {
-  margin-top: 60px;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Yusuf's corner of the internet. Explore my apps, open-source projects, photography, and Flappy Car arcade game.">
+  <meta name="theme-color" content="#f6f5ef">
+  <meta property="og:title" content="Yusuf — Code, cameras & curiosity">
+  <meta property="og:description" content="A collection of things I build and moments I capture.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://yusufmm.com/">
+  <meta property="og:image" content="https://yusufmm.com/assets/photo-4.jpg">
+  <title>Yusuf — Code, cameras & curiosity</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script src="socials.js" defer></script>
 </head>
-
 <body>
-
-<div class="container">
-
-<h1>Apps</h1>
-
-<div class="grid">
-
-  <div class="app">
-    <div class="icon"></div>
-    <div class="title">Flappy Car</div>
-    <div class="desc">A car-based Flappy Bird game</div>
-    <a class="button" href="/flappycar">Open</a>
-  </div>
-
-  <div class="app">
-    <div class="icon"></div>
-    <div class="title">Jamea TimeTable</div>
-    <div class="desc">Jamea app</div>
-    <a class="button" href="/timetable">Open</a>
-  </div>
-
-</div>
-
-<footer>
-Built by Yusuf Mohammeedi • <a href="https://github.com/Lego-Man53">GitHub</a>
-</footer>
-
-</div>
-
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header wrap">
+    <a class="wordmark" href="./" aria-label="Yusuf home">ym<span>↗</span></a>
+    <nav aria-label="Main navigation"><a href="#projects">Projects</a><a href="#photos">Photography</a><a href="#connect">Connect <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main id="main">
+    <section class="hero wrap" aria-labelledby="intro">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="status-dot"></span> CODE, CAMERAS & CURIOSITY</p>
+        <h1 id="intro">Hey, I’m Yusuf.<br>I build things.<br><em>And capture<br>the rest.</em></h1>
+        <p class="intro">Apps, little experiments, and the world through my lens. Welcome to my corner of the internet.</p>
+        <a class="button dark" href="#projects">Explore my work <span aria-hidden="true">↗</span></a>
+        <div class="hero-note"><span class="small-cross" aria-hidden="true">✳</span><span>Always curious.<br>Usually making something.</span></div>
+      </div>
+      <figure class="hero-photo">
+        <img src="assets/photo-4.jpg" alt="Snow-dusted red sandstone cliffs beneath a pale blue sky, photographed by Yusuf" width="1200" height="800" fetchpriority="high">
+        <figcaption><span>THROUGH MY LENS</span><a href="#photos">A different perspective <span aria-hidden="true">↗</span></a></figcaption>
+        <span class="photo-stamp" aria-hidden="true">Y / M<br>PHOTO JOURNAL</span>
+      </figure>
+    </section>
+    <div class="interlude wrap"><span>A FEW THINGS I’M INTO</span><p>Building. Exploring. <em>Seeing things differently.</em></p><span aria-hidden="true">↓</span></div>
+    <section class="projects wrap section" id="projects" aria-labelledby="projects-heading">
+      <div class="section-heading"><div><p class="eyebrow">01 / MADE WITH CURIOSITY</p><h2 id="projects-heading">Things I’ve built<span>.</span></h2></div><a class="text-link" href="https://github.com/Lego-Man53" target="_blank" rel="noopener noreferrer">All repositories <span aria-hidden="true">↗</span></a></div>
+      <div class="project-grid">
+        <article class="project-card featured-project">
+          <a class="project-art race-art" href="flappycar/" aria-label="Play Flappy Car"><span class="art-label">THE ARCADE / 001</span><img src="assets/racer.svg" alt="Illustrated green sports car on an illuminated three-lane road" width="620" height="340"><span class="play-pill">PLAY NOW <span aria-hidden="true">↗</span></span></a>
+          <div class="project-info"><div class="tags"><span>Browser game</span><span>JavaScript</span></div><h3><a href="flappycar/">Flappy Car <span aria-hidden="true">↗</span></a></h3><p>Three lanes. One more try. Dodge traffic and chase your personal best.</p><a class="text-link" href="https://github.com/Lego-Man53/Car-Sim-FlappyBird" target="_blank" rel="noopener noreferrer">View source <span aria-hidden="true">↗</span></a></div>
+        </article>
+        <article class="project-card">
+          <a class="project-art drop-art" href="https://github.com/Lego-Man53/DropBar" target="_blank" rel="noopener noreferrer" aria-label="Explore DropBar on GitHub"><span class="art-label">SMALL TOOL. LESS FRICTION.</span><div class="drop-window"><div class="window-top"><i></i><i></i><i></i><span>DropBar</span></div><div class="drop-zone"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M17 29a21 21 0 0 1 30 0M23 35a13 13 0 0 1 18 0M29 41a4 4 0 0 1 6 0M11 23a30 30 0 0 1 42 0"/><path d="m32 43-8 13h16Z"/></svg><strong>Drop files here</strong><span>A little closer to AirDrop.</span></div></div></a>
+          <div class="project-info"><div class="tags"><span>macOS app</span><span>Swift</span></div><h3><a href="https://github.com/Lego-Man53/DropBar" target="_blank" rel="noopener noreferrer">DropBar <span aria-hidden="true">↗</span></a></h3><p>A lightweight menu bar app. Drag, drop, and send files to nearby Apple devices.</p><a class="text-link" href="https://github.com/Lego-Man53/DropBar" target="_blank" rel="noopener noreferrer">View repository <span aria-hidden="true">↗</span></a></div>
+        </article>
+      </div>
+      <div class="more-projects"><span>ALSO ON MY DESK</span><a href="timetable/">Jamea TimeTable <span aria-hidden="true">↗</span></a><a href="https://github.com/Lego-Man53/Lego-Man53.github.io" target="_blank" rel="noopener noreferrer">This website’s source <span aria-hidden="true">↗</span></a></div>
+    </section>
+    <section class="photography section" id="photos" aria-labelledby="photos-heading"><div class="wrap">
+      <div class="section-heading"><div><p class="eyebrow">02 / AWAY FROM THE KEYBOARD</p><h2 id="photos-heading">Out of office.<br><em>Into the frame.</em></h2></div><div class="photo-intro"><p>A few moments worth slowing down for.<br>Photographs from my personal collection.</p><a class="text-link" href="https://iyusuf515253.myportfolio.com/photos" target="_blank" rel="noopener noreferrer">The full photo journal <span aria-hidden="true">↗</span></a></div></div>
+      <div class="photo-grid">
+        <a class="photo-item" href="https://iyusuf515253.myportfolio.com/photos" target="_blank" rel="noopener noreferrer"><img src="assets/photo-1.jpg" alt="A waterfall cascading down a granite cliff into clouds of mist" width="1200" height="1800" loading="lazy"><span>01 / WATER & STONE <span aria-hidden="true">↗</span></span></a>
+        <a class="photo-item landscape" href="https://iyusuf515253.myportfolio.com/photos" target="_blank" rel="noopener noreferrer"><img src="assets/photo-2.jpg" alt="Warm sandstone cliffs and trees under a vivid blue sky" width="1200" height="800" loading="lazy"><span>02 / LOOKING UP <span aria-hidden="true">↗</span></span><p>There’s always<br>another way to <em>look.</em></p></a>
+        <a class="photo-item" href="https://iyusuf515253.myportfolio.com/photos" target="_blank" rel="noopener noreferrer"><img src="assets/photo-6.jpg" alt="A tall waterfall framed by trees and weathered grey rock" width="1200" height="1800" loading="lazy"><span>03 / THE QUIET BETWEEN <span aria-hidden="true">↗</span></span></a>
+      </div>
+    </div></section>
+    <section class="connect section wrap" id="connect" aria-labelledby="connect-heading"><div><p class="eyebrow">03 / ELSEWHERE ON THE INTERNET</p><h2 id="connect-heading">Let’s stay<br><em>connected.</em> <span class="connect-star" aria-hidden="true">✳</span></h2><p>More projects, photos, and whatever comes next.</p><div class="support"><p>Enjoying my projects? You can support the next one.</p><div class="coffee-widget"><script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="legoman53" data-color="#5F7FFF" data-emoji="☕" data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#000000" data-font-color="#ffffff" data-coffee-color="#FFDD00"></script></div><a class="text-link coffee-fallback" href="https://www.buymeacoffee.com/legoman53" target="_blank" rel="noopener noreferrer">☕ Buy me a coffee <span aria-hidden="true">↗</span></a></div></div><div class="social-links"><a data-social="instagram" hidden><span>01</span><strong>Instagram</strong><span aria-hidden="true">↗</span></a><a data-social="youtube" hidden><span>02</span><strong>YouTube</strong><span aria-hidden="true">↗</span></a><a href="https://github.com/Lego-Man53" target="_blank" rel="noopener noreferrer"><span>↳</span><strong>GitHub</strong><span aria-hidden="true">↗</span></a><a href="https://iyusuf515253.myportfolio.com/photos" target="_blank" rel="noopener noreferrer"><span>↳</span><strong>Photo journal</strong><span aria-hidden="true">↗</span></a></div></section>
+  </main>
+  <footer class="wrap"><a class="wordmark" href="#">ym<span>↗</span></a><p>Made by Yusuf. A work in progress, always.</p><a href="#main">Back to top ↑</a></footer>
 </body>
 </html>
