@@ -6,7 +6,6 @@ Personal portfolio at [yusufmm.com](https://yusufmm.com/), hosted with GitHub Pa
 
 - `/`: photography, featured projects, and social profiles.
 - `/flappycar/`: the Flappy Car — Night Drive game, synchronized from [Car-Sim-FlappyBird](https://github.com/Lego-Man53/Car-Sim-FlappyBird).
-- `/timetable/`: existing Jamea TimeTable project page.
 
 ## Edit
 
