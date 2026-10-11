@@ -36,6 +36,10 @@ assert.equal(payload.store, false);
 assert.equal(payload.text.format.strict, true);
 assert.equal(payload.input[0].content[1].image_url, image);
 assert.equal(payload.max_output_tokens, 1000);
+assert.equal(payload.model, 'gpt-6-luna');
+assert.deepEqual(payload.reasoning, { effort: 'none' }, 'Photo captions should not spend extra reasoning tokens');
+const ignoredOverride = await run(input, { env: { OPENAI_PHOTO_MODEL: 'expensive-model' } });
+assert.equal(JSON.parse(ignoredOverride.calls.at(-1).body).model, 'gpt-6-luna', 'Do not silently switch to a more expensive model');
 for (const options of [{ noAuth: true }, { expired: true }, { nonAdmin: true }, { origin: 'https://another-site.example' }, { limited: true }, { env: { OPENAI_API_KEY: '' } }]) {
   const result = await run(input, options);
   assert.ok(result.response.status >= 400);
@@ -48,6 +52,7 @@ for (const bad of [{ ...input, image: 'https://private.example/image' }, { ...in
 }
 const status = await run({ action: 'status' });
 assert.equal(status.data.configured, true);
+assert.equal(status.data.model, 'gpt-6-luna');
 assert.equal(status.calls.length, 2, 'Connection checks do not spend usage allowance or API credits');
 assert.equal((await run({ action: 'status' }, { env: { OPENAI_API_KEY: '' } })).data.configured, false);
 assert.equal((await run(input, { providerError: 429 })).data.code, 'quota');
