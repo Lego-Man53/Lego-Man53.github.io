@@ -13,7 +13,7 @@ create or replace function public.is_photo_admin() returns boolean
 language sql stable security definer set search_path = '' as $$
   select exists(select 1 from public.photo_admins where user_id = auth.uid());
 $$;
-revoke all on function public.is_photo_admin() from public;
+revoke all on function public.is_photo_admin() from public, anon, authenticated;
 grant execute on function public.is_photo_admin() to anon, authenticated;
 
 create table if not exists public.photos (
@@ -68,7 +68,7 @@ language sql stable security invoker set search_path = '' as $$
     'settings', (select to_jsonb(s) from public.photo_settings s where s.id = 1)
   );
 $$;
-revoke all on function public.read_photo_gallery() from public;
+revoke all on function public.read_photo_gallery() from public, anon, authenticated;
 grant execute on function public.read_photo_gallery() to anon, authenticated;
 
 create or replace function public.read_photo_admin() returns jsonb
@@ -81,7 +81,7 @@ begin
   );
 end;
 $$;
-revoke all on function public.read_photo_admin() from public;
+revoke all on function public.read_photo_admin() from public, anon, authenticated;
 grant execute on function public.read_photo_admin() to authenticated;
 
 create or replace function public.save_photo_gallery(photo_rows jsonb, gallery_settings jsonb, expected_revision integer) returns jsonb
@@ -121,7 +121,7 @@ begin
   return jsonb_build_object('revision',current_revision+1);
 end;
 $$;
-revoke all on function public.save_photo_gallery(jsonb,jsonb,integer) from public;
+revoke all on function public.save_photo_gallery(jsonb,jsonb,integer) from public, anon, authenticated;
 grant execute on function public.save_photo_gallery(jsonb,jsonb,integer) to authenticated;
 
 -- Private bucket: hidden uploads do not have publicly downloadable URLs.

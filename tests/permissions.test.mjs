@@ -5,6 +5,7 @@ const { PGlite } = await import(process.env.PGLITE_MODULE || '@electric-sql/pgli
 const db = new PGlite();
 await db.exec(`
   create role anon; create role authenticated;
+  alter default privileges grant execute on functions to anon, authenticated;
   create schema auth; create schema storage;
   create table auth.users(id uuid primary key);
   create function auth.uid() returns uuid language sql stable as
