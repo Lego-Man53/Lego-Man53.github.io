@@ -1,8 +1,12 @@
 import { getClient, check, photoURLs, arrange, validatePhoto, imageStyle } from '../lib/photos.js';
+import { invokeAI, photoPreview } from './ai.js';
 
 const $ = selector => document.querySelector(selector);
 const status = (message = '', error = false) => { $('#status').textContent = message; $('#status').dataset.error = error; };
 let client, photos = [], settings, snapshot, dirty = false, busy = false, pendingUploads = new Set(), cleanupQueue = new Set();
+let aiReady = false;
+const suggestions = new Map();
+const shapeNames = { portrait: 'Portrait · 4:5', landscape: 'Landscape · 3:2', square: 'Square · 1:1', original: 'Original proportions' };
 const serializable = () => photos.map(({ url, ...photo }, sort_order) => ({ ...photo, sort_order }));
 function changed() { dirty = true; $('#save').disabled = busy; $('#discard').disabled = busy; }
 function lock(value) {
@@ -20,10 +24,57 @@ async function cleanFiles(paths) {
 async function load() {
   const data = check(await client.rpc('read_photo_admin'));
   const resolved = await photoURLs(data.photos, client);
-  photos = resolved; settings = data.settings;
+  photos = resolved; settings = data.settings; suggestions.clear();
   snapshot = structuredClone({ photos, settings }); dirty = false;
   $('#login').hidden = true; $('#workspace').hidden = false; $('#logout').hidden = false; $('#counts').hidden = false;
   render();
+  void checkAIConnection();
+}
+async function checkAIConnection() {
+  $('#ai-status').textContent = 'Checking AI connection…';
+  try {
+    const data = await invokeAI(client, { action: 'status' }); aiReady = data.configured === true;
+    $('#ai-status').textContent = aiReady ? 'Ready when you are.' : 'AI suggestions need their secure connection set up.';
+  } catch { aiReady = false; $('#ai-status').textContent = 'AI suggestions are not connected yet. You can still edit every photo yourself.'; }
+  $('#photo-list').querySelectorAll('[data-action="suggest"]').forEach(button => { button.disabled = !aiReady; });
+}
+function renderSuggestion(card, photo) {
+  const suggestion = suggestions.get(photo.id);
+  const preview = card.querySelector('.ai-suggestion');
+  preview.hidden = !suggestion;
+  if (!suggestion) return;
+  const heading = document.createElement('h3'); heading.textContent = 'A draft for your photo'; preview.append(heading);
+  const list = document.createElement('dl');
+  for (const [label, value] of [['Title', suggestion.title], ['Accessibility description', suggestion.alt], ['Caption', suggestion.caption], ['Display shape', shapeNames[suggestion.aspect]]]) {
+    const term = document.createElement('dt'), detail = document.createElement('dd'); term.textContent = label; detail.textContent = value; list.append(term, detail);
+  }
+  preview.append(list);
+  const reason = document.createElement('p'); reason.textContent = suggestion.reason; preview.append(reason);
+  const actions = document.createElement('div'); actions.className = 'ai-review-actions';
+  const apply = document.createElement('button'); apply.className = 'button dark'; apply.textContent = 'Use these suggestions';
+  apply.onclick = () => {
+    for (const field of ['title', 'alt', 'caption', 'aspect']) photo[field] = suggestion[field];
+    suggestions.delete(photo.id); changed(); render(); status('Suggestions applied to your draft. Edit anything you like, then save to publish.');
+    $('#photo-list').children[photos.findIndex(p => p.id === photo.id)].querySelector('[data-field="title"]').focus();
+  };
+  const dismiss = document.createElement('button'); dismiss.className = 'plain-button'; dismiss.textContent = 'Keep my details';
+  dismiss.onclick = () => { suggestions.delete(photo.id); render(); };
+  actions.append(apply, dismiss); preview.append(actions);
+}
+async function suggestPhoto(photo) {
+  lock(true); status(`Looking at “${photo.title}”…`);
+  try {
+    const preview = await photoPreview(photo.url);
+    const data = await invokeAI(client, { action: 'suggest', ...preview, notes: $('#ai-notes').value.trim() });
+    suggestions.set(photo.id, data.suggestion);
+    status('Your AI draft is ready. Review it below before using the suggestions.');
+  } catch (error) { status(error.message, true); }
+  finally {
+    lock(false); render();
+    const card = $('#photo-list').children[photos.findIndex(p => p.id === photo.id)];
+    const preview = card?.querySelector('.ai-suggestion');
+    if (preview && !preview.hidden) { preview.focus(); preview.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+  }
 }
 function renderOptions() {
   $('#layout').value = settings.layout; $('#columns').value = settings.columns;
@@ -41,6 +92,12 @@ function render() {
     const card = document.createElement('article'); card.className = 'edit-card';
     card.innerHTML = '<div class="edit-preview"><img alt=""><span class="photo-state"></span></div><div class="edit-fields"><label>Title<input data-field="title" maxlength="160" required></label><label>Description for accessibility<input data-field="alt" maxlength="500" required></label><label>Caption<textarea data-field="caption" maxlength="2000" rows="2"></textarea></label><div class="check-row"><label><input data-field="visible" type="checkbox">Visible</label><label><input data-field="homepage" type="checkbox">On homepage</label></div><label>Display shape<select data-field="aspect"><option value="portrait">Portrait</option><option value="landscape">Landscape</option><option value="square">Square</option><option value="original">Original proportions</option></select></label><div class="field-pair"><label class="focal-control">Crop: left ↔ right<input data-field="focal_x" type="range" min="0" max="100"></label><label class="focal-control">Crop: top ↔ bottom<input data-field="focal_y" type="range" min="0" max="100"></label></div><div class="card-actions"><div><button data-action="up" aria-label="Move photo earlier">↑</button> <button data-action="down" aria-label="Move photo later">↓</button></div><button data-action="delete" class="danger">Delete</button></div></div>';
     const image = card.querySelector('img'); image.src = photo.url; image.alt = photo.alt; image.style.objectPosition = imageStyle(photo);
+    const aiActions = document.createElement('div'); aiActions.className = 'photo-ai-actions';
+    const suggest = document.createElement('button'); suggest.dataset.action = 'suggest'; suggest.className = 'ai-button'; suggest.textContent = '✦ Suggest with AI'; suggest.disabled = !aiReady;
+    suggest.onclick = () => suggestPhoto(photo);
+    aiActions.append(suggest); card.querySelector('.edit-fields').prepend(aiActions);
+    const aiPreview = document.createElement('section'); aiPreview.className = 'ai-suggestion'; aiPreview.tabIndex = -1; aiPreview.setAttribute('aria-label', 'AI suggestions');
+    aiActions.after(aiPreview); renderSuggestion(card, photo);
     const badge = card.querySelector('.photo-state'); badge.textContent = photo.visible ? 'VISIBLE' : 'HIDDEN';
     card.querySelectorAll('[data-field]').forEach(input => {
       const field = input.dataset.field;
@@ -93,7 +150,7 @@ $('#files').onchange = async event => {
       try { [resolved] = await photoURLs([photo], client); } catch (error) { await cleanFiles([path]); throw error; }
       photos.push(resolved); added++; changed();
     }
-    status(`${added} photo${added === 1 ? '' : 's'} added. Edit the details, then save to publish.`);
+    status(`${added} photo${added === 1 ? '' : 's'} added. Use “Suggest with AI” or edit the details yourself, then save to publish.`);
   } catch (error) { status(`${added ? `${added} uploaded. ` : ''}${error.message}`, true); }
   finally { event.target.value = ''; lock(false); render(); }
 };
@@ -121,7 +178,7 @@ $('#save').onclick = async () => {
 };
 $('#discard').onclick = async () => {
   lock(true);
-  try { await cleanFiles([...pendingUploads]); photos = structuredClone(snapshot.photos); settings = structuredClone(snapshot.settings); dirty = false; status('Unsaved changes discarded.'); render(); }
+  try { await cleanFiles([...pendingUploads]); photos = structuredClone(snapshot.photos); settings = structuredClone(snapshot.settings); suggestions.clear(); dirty = false; status('Unsaved changes discarded.'); render(); }
   catch (error) { status(`Could not discard uploaded files: ${error.message}`, true); }
   finally { lock(false); }
 };
@@ -159,7 +216,7 @@ async function init() {
     if (!client) { $('#setup').hidden = false; status('Photo storage has not been connected yet.'); return; }
     client.auth.onAuthStateChange(event => {
       if (event === 'PASSWORD_RECOVERY') { $('#login').hidden = true; $('#workspace').hidden = true; $('#recovery').hidden = false; status('Choose a new password.'); }
-      if (event === 'SIGNED_OUT') { $('#workspace').hidden = true; $('#logout').hidden = true; $('#login').hidden = false; $('#photo-list').replaceChildren(); photos = []; dirty = false; }
+      if (event === 'SIGNED_OUT') { $('#workspace').hidden = true; $('#logout').hidden = true; $('#login').hidden = false; $('#photo-list').replaceChildren(); photos = []; suggestions.clear(); aiReady = false; dirty = false; }
     });
     const { data } = await client.auth.getSession();
     if (recovering && data.session) { $('#recovery').hidden = false; status('Choose a new password.'); }

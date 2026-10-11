@@ -43,8 +43,25 @@ Uploads accept JPEG, PNG, WebP and AVIF up to 15 MB each. Uploaded files are kep
 
 The bundled browser library in `vendor/supabase.js` is `@supabase/supabase-js` 2.117.3 (MIT; see `vendor/SUPABASE-LICENSE`). Login sessions use session storage and end when the browser tab closes.
 
+## AI photo assistant
+
+Each photo in the studio has **Suggest with AI**. Add optional notes about the place, memory, or preferred voice, generate a draft, then choose **Use these suggestions** or **Keep my details**. Suggestions cover the title, accessibility description, caption, and display shape (portrait 4:5, landscape 3:2, square, or original). Using a suggestion only edits the local draft; **Save changes** still publishes it. New uploads can be analyzed before being published. AI does not change the original file, visibility, homepage selection, order, or crop position.
+
+One-time setup after the gallery is connected:
+
+1. Run `supabase/ai-setup.sql` in the project's SQL editor. Only photo admins can reserve requests. The database atomically limits attempts to 30 per hour and 100 per rolling 24 hours per admin; users cannot reset their counters. Failed provider attempts also count.
+2. In **Edge Functions → Secrets**, save `OPENAI_API_KEY`. The key stays server-side and must never appear in `photo-config.js`, browser storage, or the repository. API usage is billed to that key's OpenAI project. Optional `OPENAI_PHOTO_MODEL` overrides the default `gpt-4.1-mini`, which supports image input and structured outputs.
+3. Deploy the `photo-assist` function from `supabase/functions/photo-assist/`. The CLI uses `supabase/config.toml`; for the dashboard editor, paste `handler.js` followed by `Deno.serve(createHandler(Deno.env.toObject()));` into `index.ts`. Disable the gateway's legacy JWT verifier for this function. The handler itself validates each session with Supabase Auth and checks photo admin membership through the user's RLS-scoped connection; neither a publishable key nor an ordinary user account can use AI. No service-role credential is used. If using the CLI, run `supabase functions deploy photo-assist --project-ref YOUR-PROJECT-REF`.
+4. Refresh `/admin/` and confirm **Ready when you are**. Try an existing photo and review the draft. Missing setup, an expired login, a provider failure, or a usage limit leaves all photo edits intact.
+
+The browser sends a JPEG preview with its longest side at most 1280 pixels, re-encoded without file metadata, plus the notes you enter. The original uploaded image stays in Supabase. OpenAI Responses requests use `store: false`; this does not replace OpenAI's API data-retention rules. The function permits browser origins `https://yusufmm.com` and `https://www.yusufmm.com`; for local testing, explicitly add the local origin to the server-side `PHOTO_AI_ORIGINS` comma-separated secret. No photo is sent just by uploading or opening the studio. Connection checks do not use API credits.
+
+See [OpenAI image input documentation](https://developers.openai.com/api/docs/guides/images-vision), [structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs), and [Supabase function authentication](https://supabase.com/docs/guides/functions/auth).
+
 ## Photo checks
 
 Run `node tests/photos.test.mjs` for upload validation and ordering checks. `tests/permissions.test.mjs` runs the real schema in PostgreSQL via PGlite and tests visitors, non-admin users, admins, private file access, publish/hide/delete, failed-save rollback, repeatable setup, and revision conflicts. Install `@electric-sql/pglite` in a temporary test folder, then run with `PGLITE_MODULE=/absolute/path/to/node_modules/@electric-sql/pglite/dist/index.js node tests/permissions.test.mjs`. Test dependencies are not shipped to visitors.
+
+Run `node tests/ai.test.mjs` for AI authorization, preview bounds, secret isolation, structured output and provider errors. Run `tests/ai-permissions.test.mjs` with the same `PGLITE_MODULE` to verify database usage permissions and hourly/daily limits. These checks use simulated provider responses and disposable data; they never call OpenAI or alter the live gallery.
 
 To update the game, copy its `index.html`, `styles.css`, `game-core.js`, and `game.js` from the game repository into `flappycar/` together. Run the simulation tests in that repository before copying.
