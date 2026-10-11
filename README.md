@@ -39,7 +39,7 @@ Until connected, visitors see the starting gallery and `/admin/` clearly reports
 
 New uploads use a private bucket. Published images receive signed download links valid for one hour, so a link already issued before hiding a photo can remain valid for up to one hour. The original files in `assets/` were already public and remain directly accessible at their existing URLs even if removed from the journal. The studio hides them from the gallery; removing those original public files requires removing them from the repository.
 
-Uploads accept JPEG, PNG, WebP and AVIF up to 15 MB each. Uploaded files are kept private until you save. Discarding edits or logging out removes unsaved uploads. Closing a tab with unsaved uploads may leave an unreferenced private file in the bucket; it is never listed publicly. Delete removes photo records when saved and then cleans up their uploaded files. Existing source assets are retained. Saves are transactional, and a revision check stops one admin session from overwriting newer changes from another.
+Uploads accept JPEG, PNG, WebP and AVIF up to 30 MB each. Uploaded files are kept private until you save. Discarding edits or logging out removes unsaved uploads. Closing a tab with unsaved uploads may leave an unreferenced private file in the bucket; it is never listed publicly. Delete removes photo records when saved and then cleans up their uploaded files. Existing source assets are retained. Saves are transactional, and a revision check stops one admin session from overwriting newer changes from another.
 
 The bundled browser library in `vendor/supabase.js` is `@supabase/supabase-js` 2.117.3 (MIT; see `vendor/SUPABASE-LICENSE`). Login sessions use session storage and end when the browser tab closes.
 

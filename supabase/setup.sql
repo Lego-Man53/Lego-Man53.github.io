@@ -126,7 +126,7 @@ grant execute on function public.save_photo_gallery(jsonb,jsonb,integer) to auth
 
 -- Private bucket: hidden uploads do not have publicly downloadable URLs.
 insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
-values ('photos','photos',false,15728640,array['image/jpeg','image/png','image/webp','image/avif'])
+values ('photos','photos',false,31457280,array['image/jpeg','image/png','image/webp','image/avif'])
 on conflict(id) do update set public=false,file_size_limit=excluded.file_size_limit,allowed_mime_types=excluded.allowed_mime_types;
 drop policy if exists "Read published photo files or admin files" on storage.objects;
 create policy "Read published photo files or admin files" on storage.objects for select to anon, authenticated
