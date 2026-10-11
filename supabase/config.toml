@@ -1,4 +1,4 @@
 [functions.photo-assist]
-# The handler verifies the session with Supabase Auth and checks photo admin membership.
-# This supports current signing keys without depending on the gateway's legacy verifier.
-verify_jwt = false
+# This project's login tokens work with the gateway verifier. The handler also
+# validates the session with Supabase Auth and checks photo admin membership.
+verify_jwt = true
