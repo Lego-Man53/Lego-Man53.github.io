@@ -1,5 +1,5 @@
 import { getClient, check, photoURLs, arrange, validatePhoto, imageStyle } from '../lib/photos.js';
-import { invokeAI, photoPreview, suggestBatch } from './ai.js';
+import { invokeAI, photoPreview, suggestBatch } from './ai.js?v=20261011-batch';
 
 const $ = selector => document.querySelector(selector);
 const status = (message = '', error = false) => { $('#status').textContent = message; $('#status').dataset.error = error; };
