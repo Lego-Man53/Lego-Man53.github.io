@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow">
+  <title>Photo studio — Yusuf</title><link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../styles.css"><link rel="stylesheet" href="../photos.css"><link rel="stylesheet" href="admin.css">
+  <script src="../photo-config.js" defer></script><script src="../vendor/supabase.js" defer></script><script type="module" src="admin.js"></script>
+</head><body>
+  <header class="site-header wrap"><a class="wordmark" href="../" aria-label="Yusuf home">ym<span>↗</span></a><nav aria-label="Studio navigation"><a href="../photos/">View photo journal ↗</a><button id="logout" hidden>Log out</button></nav></header>
+  <main class="wrap studio"><div class="studio-heading"><div><p class="eyebrow">YOUR SPACE / YOUR PHOTOGRAPHS</p><h1>Photo <em>studio.</em></h1><p class="studio-intro">Make room for the way you see things.</p></div><div id="counts" class="studio-counts" hidden></div></div>
+    <p id="status" role="status" aria-live="polite">Connecting…</p>
+    <section id="setup" class="login-panel" hidden><h2>One connection to make.</h2><p>Your photo studio is ready to connect to Supabase. Once the connection is set up, you can manage everything here.</p><a class="button dark" href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer">Open Supabase ↗</a></section>
+    <section id="login" class="login-panel" hidden><h2>Welcome back.</h2><p>Log in to look after your photo journal.</p><form id="login-form"><label>Email<input type="email" name="email" autocomplete="username" required></label><label>Password<input type="password" name="password" autocomplete="current-password" required></label><button class="button dark" type="submit">Log in <span aria-hidden="true">↗</span></button></form><button id="forgot" class="plain-button">Forgot your password?</button></section>
+    <section id="recovery" class="login-panel" hidden><h2>A fresh start.</h2><form id="password-form"><label>New password<input name="password" type="password" autocomplete="new-password" minlength="12" required></label><button class="button dark">Update password</button></form></section>
+    <section id="workspace" hidden>
+      <div class="studio-toolbar"><div><button class="button dark" id="upload">+ Add photos</button><input type="file" id="files" accept="image/jpeg,image/png,image/webp,image/avif" multiple hidden><span class="file-note">JPG, PNG, WebP, AVIF · up to 15 MB each</span></div><button id="save" class="button dark" disabled>Save changes ↗</button></div>
+      <div class="studio-options"><label>Gallery layout<select id="layout"><option value="editorial">Editorial — staggered</option><option value="grid">Clean grid</option></select></label><label>Desktop columns<select id="columns"><option value="2">Two</option><option value="3">Three</option><option value="4">Four</option></select></label><label>Homepage cover<select id="hero"><option value="">No cover photo</option></select></label><button class="plain-button" id="discard" disabled>Discard unsaved changes</button></div>
+      <p class="edit-note">Changes stay here until you save. Hidden photos are only visible to you. Use the arrows to change their order.</p>
+      <div id="photo-list" class="studio-grid"></div><p id="empty" hidden>Your next photograph starts here. Add a few photos to begin.</p>
+    </section>
+    <noscript><p>Turn on JavaScript to use your photo studio.</p></noscript>
+  </main>
+  <dialog id="delete-dialog" class="confirm-dialog"><form method="dialog"><h2>Delete this photograph?</h2><p id="delete-name"></p><p>It will be removed from the website when you save your changes.</p><div><button value="cancel">Keep photo</button><button value="delete" class="danger">Delete photo</button></div></form></dialog>
+  <footer class="wrap"><p>Your photographs. Your corner of the internet.</p><a href="../">Back to website ↑</a></footer>
+</body></html>

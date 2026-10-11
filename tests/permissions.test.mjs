@@ -1,0 +1,74 @@
+// Run with PGlite available through PGLITE_MODULE (see README).
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+const { PGlite } = await import(process.env.PGLITE_MODULE || '@electric-sql/pglite');
+const db = new PGlite();
+await db.exec(`
+  create role anon; create role authenticated;
+  create schema auth; create schema storage;
+  create table auth.users(id uuid primary key);
+  create function auth.uid() returns uuid language sql stable as
+    $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+  grant usage on schema auth, storage to anon, authenticated;
+  grant execute on function auth.uid() to anon, authenticated;
+  create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
+  create table storage.objects(id uuid primary key,name text,bucket_id text);
+  alter table storage.objects enable row level security;
+  grant select,insert,delete on storage.objects to anon,authenticated;
+  insert into auth.users values ('11111111-1111-4111-8111-111111111111'),('22222222-2222-4222-8222-222222222222');
+`);
+const schema = await readFile(new URL('../supabase/setup.sql', import.meta.url), 'utf8');
+await db.exec(schema);
+await db.exec(schema); // Setup is repeatable.
+await db.exec("insert into public.photo_admins values('11111111-1111-4111-8111-111111111111')");
+const login = async (role, id = '') => {
+  await db.exec('reset role');
+  await db.query("select set_config('request.jwt.claim.sub',$1,false)", [id]);
+  await db.exec(`set role ${role}`);
+};
+const gallery = async () => (await db.query('select public.read_photo_gallery() as value')).rows[0].value;
+const save = async (photos, revision, settings = { layout: 'grid', columns: 3, hero_id: null }) =>
+  (await db.query('select public.save_photo_gallery($1::jsonb,$2::jsonb,$3) as value', [JSON.stringify(photos), JSON.stringify(settings), revision])).rows[0].value;
+await login('anon');
+assert.equal((await gallery()).photos.length, 4);
+await assert.rejects(db.query('select public.read_photo_admin()'), /permission denied/);
+await assert.rejects(save([], 0), /permission denied/);
+await assert.rejects(db.query("insert into public.photos(id) values(gen_random_uuid())"), /permission denied/);
+await login('authenticated', '22222222-2222-4222-8222-222222222222');
+await assert.rejects(db.query('select public.read_photo_admin()'), /Admin access required/);
+await assert.rejects(save([], 0), /Admin access required/);
+await assert.rejects(db.query("insert into public.photo_admins values('22222222-2222-4222-8222-222222222222')"), /permission denied/);
+await assert.rejects(db.query("insert into storage.objects values(gen_random_uuid(),'22222222-2222-4222-8222-222222222222.jpg','photos')"), /row-level security/);
+await login('authenticated', '11111111-1111-4111-8111-111111111111');
+let photos = (await gallery()).photos;
+photos[0].visible = false;
+photos.push({ ...photos[1], id: '33333333-3333-4333-8333-333333333333', storage_path: '33333333-3333-4333-8333-333333333333.jpg', local_path: null, visible: false });
+assert.equal((await save(photos, 0)).revision, 1);
+await db.query("insert into storage.objects values(gen_random_uuid(),'33333333-3333-4333-8333-333333333333.jpg','photos')");
+assert.equal((await db.query('select * from storage.objects')).rows.length, 1);
+await assert.rejects(save(photos, 0), /another session/);
+await assert.rejects(save([...photos,photos[0]], 1), /unique ID/);
+await assert.rejects(save(photos, 1, { layout: 'grid', columns: 3, hero_id: photos[0].id }), /visible photo/);
+await assert.rejects(save([{ ...photos[0], title: '', visible: true }], 1), /check constraint/);
+assert.equal((await db.query('select public.read_photo_admin() as value')).rows[0].value.photos.length, 5, 'Invalid saves roll back deletions');
+await login('anon');
+assert.equal((await gallery()).photos.length, 3);
+assert.equal((await db.query('select * from storage.objects')).rows.length, 0, 'Hidden storage is not readable');
+await login('authenticated', '11111111-1111-4111-8111-111111111111');
+photos[4].visible = true;
+await save(photos, 1);
+await login('anon');
+assert.equal((await gallery()).photos.length, 4);
+assert.equal((await db.query('select * from storage.objects')).rows.length, 1, 'Published storage is readable');
+await db.query('delete from storage.objects');
+await login('authenticated', '11111111-1111-4111-8111-111111111111');
+assert.equal((await db.query('select * from storage.objects')).rows.length, 1, 'Visitors cannot delete storage');
+await save([], 2);
+await db.query('delete from storage.objects');
+await db.exec('reset role');
+await db.exec(schema);
+await login('anon');
+assert.equal((await gallery()).photos.length, 0, 'Deleting all photos stays empty');
+assert.equal((await db.query('select * from storage.objects')).rows.length, 0);
+await db.close();
+console.log('Database permissions, private storage, publish/hide/delete, atomic rollback, and conflict checks passed.');
