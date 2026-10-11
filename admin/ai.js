@@ -9,6 +9,18 @@ export async function invokeAI(client, body) {
   }
   return result.data;
 }
+// Keep paid requests sequential. Stop at the first error so a quota or connection
+// problem cannot turn into a paid retry loop; completed drafts remain available.
+export async function suggestBatch(photos, { suggest, shouldStop, onProgress }) {
+  let completed = 0;
+  for (const photo of photos) {
+    if (shouldStop()) return { completed, stopped: true };
+    onProgress(photo, completed + 1, photos.length);
+    try { await suggest(photo); completed++; }
+    catch (error) { return { completed, error }; }
+  }
+  return { completed, stopped: shouldStop() };
+}
 export async function photoPreview(url) {
   const response = await fetch(url);
   if (!response.ok) throw new Error('The photo could not load for AI. Refresh your studio and try again.');

@@ -47,6 +47,8 @@ The bundled browser library in `vendor/supabase.js` is `@supabase/supabase-js` 2
 
 Each photo in the studio has **Suggest with AI**. Add optional notes about the place, memory, or preferred voice, generate a draft, then choose **Use these suggestions** or **Keep my details**. Suggestions cover the title, accessibility description, caption, and display shape (portrait 4:5, landscape 3:2, square, or original). Using a suggestion only edits the local draft; **Save changes** still publishes it. New uploads can be analyzed before being published. AI does not change the original file, visibility, homepage selection, order, or crop position.
 
+For mass uploads, choose **New uploads** and **Suggest for batch**. The studio selects this scope after an upload; **All photos without drafts** also handles existing photos. Completed suggestion drafts are skipped when continuing a batch. Requests run sequentially with a progress indicator and **Stop after this photo**; stopping or a request failure keeps completed drafts. There are no automatic retries. Review individually or select **Use all drafts**, then edit and save when ready. Batch requests use the same inexpensive model and existing 30/hour and 100/day limits; a batch pauses when a limit is reached. Generating drafts does not mark the gallery for publication or change any photo details until you apply them.
+
 One-time setup after the gallery is connected:
 
 1. Run `supabase/ai-setup.sql` in the project's SQL editor. Only photo admins can reserve requests. The database atomically limits attempts to 30 per hour and 100 per rolling 24 hours per admin; users cannot reset their counters. Failed provider attempts also count.
@@ -63,5 +65,7 @@ See [OpenAI image input documentation](https://developers.openai.com/api/docs/gu
 Run `node tests/photos.test.mjs` for upload validation and ordering checks. `tests/permissions.test.mjs` runs the real schema in PostgreSQL via PGlite and tests visitors, non-admin users, admins, private file access, publish/hide/delete, failed-save rollback, repeatable setup, and revision conflicts. Install `@electric-sql/pglite` in a temporary test folder, then run with `PGLITE_MODULE=/absolute/path/to/node_modules/@electric-sql/pglite/dist/index.js node tests/permissions.test.mjs`. Test dependencies are not shipped to visitors.
 
 Run `node tests/ai.test.mjs` for AI authorization, preview bounds, secret isolation, structured output and provider errors. Run `tests/ai-permissions.test.mjs` with the same `PGLITE_MODULE` to verify database usage permissions and hourly/daily limits. These checks use simulated provider responses and disposable data; they never call OpenAI or alter the live gallery.
+
+Run `node tests/ai-batch.test.mjs` for sequential requests, progress, cancellation after the current request, and preservation of completed drafts on failure.
 
 To update the game, copy its `index.html`, `styles.css`, `game-core.js`, and `game.js` from the game repository into `flappycar/` together. Run the simulation tests in that repository before copying.

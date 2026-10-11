@@ -1,10 +1,11 @@
 import { getClient, check, photoURLs, arrange, validatePhoto, imageStyle } from '../lib/photos.js';
-import { invokeAI, photoPreview } from './ai.js';
+import { invokeAI, photoPreview, suggestBatch } from './ai.js';
 
 const $ = selector => document.querySelector(selector);
 const status = (message = '', error = false) => { $('#status').textContent = message; $('#status').dataset.error = error; };
 let client, photos = [], settings, snapshot, dirty = false, busy = false, pendingUploads = new Set(), cleanupQueue = new Set();
 let aiReady = false;
+let stopBatch = false;
 const suggestions = new Map();
 const shapeNames = { portrait: 'Portrait · 4:5', landscape: 'Landscape · 3:2', square: 'Square · 1:1', original: 'Original proportions' };
 const serializable = () => photos.map(({ url, ...photo }, sort_order) => ({ ...photo, sort_order }));
@@ -15,6 +16,21 @@ function lock(value) {
   $('#logout').disabled = value;
   $('#save').disabled = value || !dirty;
   $('#discard').disabled = value || !dirty;
+  renderBatchControls();
+}
+function batchPhotos() {
+  return photos.filter(photo => !suggestions.has(photo.id) && ($('#ai-scope').value !== 'new' || pendingUploads.has(photo.storage_path)));
+}
+function renderBatchControls() {
+  const newUploads = photos.some(photo => pendingUploads.has(photo.storage_path));
+  $('#ai-scope option[value="new"]').disabled = !newUploads;
+  if (!newUploads) $('#ai-scope').value = 'all';
+  const count = batchPhotos().length;
+  $('#ai-batch').disabled = busy || !aiReady || !count;
+  $('#ai-batch-count').textContent = `${count} photo${count === 1 ? '' : 's'} to suggest · existing drafts are skipped`;
+  $('#ai-apply-all').hidden = !suggestions.size;
+  $('#ai-apply-all').disabled = busy;
+  $('#ai-apply-all').textContent = `Use all ${suggestions.size} draft${suggestions.size === 1 ? '' : 's'}`;
 }
 async function cleanFiles(paths) {
   if (!paths.length) return;
@@ -37,6 +53,7 @@ async function checkAIConnection() {
     $('#ai-status').textContent = aiReady ? 'Ready when you are.' : 'AI suggestions need their secure connection set up.';
   } catch { aiReady = false; $('#ai-status').textContent = 'AI suggestions are not connected yet. You can still edit every photo yourself.'; }
   $('#photo-list').querySelectorAll('[data-action="suggest"]').forEach(button => { button.disabled = !aiReady; });
+  renderBatchControls();
 }
 function renderSuggestion(card, photo) {
   const suggestion = suggestions.get(photo.id);
@@ -64,9 +81,7 @@ function renderSuggestion(card, photo) {
 async function suggestPhoto(photo) {
   lock(true); status(`Looking at “${photo.title}”…`);
   try {
-    const preview = await photoPreview(photo.url);
-    const data = await invokeAI(client, { action: 'suggest', ...preview, notes: $('#ai-notes').value.trim() });
-    suggestions.set(photo.id, data.suggestion);
+    await draftPhoto(photo, $('#ai-notes').value.trim());
     status('Your AI draft is ready. Review it below before using the suggestions.');
   } catch (error) { status(error.message, true); }
   finally {
@@ -76,6 +91,49 @@ async function suggestPhoto(photo) {
     if (preview && !preview.hidden) { preview.focus(); preview.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
   }
 }
+async function draftPhoto(photo, notes) {
+  const preview = await photoPreview(photo.url);
+  const data = await invokeAI(client, { action: 'suggest', ...preview, notes });
+  suggestions.set(photo.id, data.suggestion);
+}
+$('#ai-scope').onchange = renderBatchControls;
+$('#ai-stop').onclick = () => {
+  stopBatch = true; $('#ai-stop').disabled = true;
+  $('#ai-progress-text').textContent = 'Stopping after the current photo. Completed drafts will stay here.';
+};
+$('#ai-batch').onclick = async () => {
+  const queue = batchPhotos();
+  if (busy || !aiReady || !queue.length) return;
+  const notes = $('#ai-notes').value.trim();
+  stopBatch = false; lock(true);
+  $('#ai-progress').hidden = false; $('#ai-stop').disabled = false;
+  $('#ai-progress-bar').max = queue.length; $('#ai-progress-bar').value = 0;
+  status('Writing AI drafts for your batch. You can stop after the current photo.');
+  try {
+    const result = await suggestBatch(queue, {
+      shouldStop: () => stopBatch,
+      onProgress: (photo, index, total) => { $('#ai-progress-text').textContent = `Photo ${index} of ${total}: ${photo.title}`; },
+      suggest: async photo => { await draftPhoto(photo, notes); $('#ai-progress-bar').value++; }
+    });
+    const ready = `${result.completed} of ${queue.length} drafts ready.`;
+    status(result.error ? `${ready} Batch paused: ${result.error.message} Completed drafts are kept; run the batch again to continue.` : `${ready} ${result.stopped ? 'Batch stopped. ' : ''}Review the drafts below or use them all, then save to publish.`, Boolean(result.error));
+  } finally {
+    $('#ai-progress').hidden = true; lock(false); render();
+    $('#ai-apply-all').hidden ? $('#ai-batch').focus() : $('#ai-apply-all').focus();
+  }
+};
+$('#ai-apply-all').onclick = () => {
+  let applied = 0;
+  for (const photo of photos) {
+    const suggestion = suggestions.get(photo.id);
+    if (!suggestion) continue;
+    for (const field of ['title', 'alt', 'caption', 'aspect']) photo[field] = suggestion[field];
+    applied++;
+  }
+  if (!applied) return;
+  suggestions.clear(); changed(); render();
+  status(`${applied} AI drafts applied. Edit anything you like, then save to publish.`);
+};
 function renderOptions() {
   $('#layout').value = settings.layout; $('#columns').value = settings.columns;
   $('#hero').replaceChildren(new Option('No cover photo', ''));
@@ -119,7 +177,7 @@ function render() {
     card.querySelector('[data-action="delete"]').onclick = () => {
       $('#delete-name').textContent = photo.title;
       const dialog = $('#delete-dialog'); dialog.returnValue = '';
-      dialog.addEventListener('close', () => { if (dialog.returnValue === 'delete') { photos = photos.filter(p => p.id !== photo.id); changed(); render(); } }, { once: true });
+      dialog.addEventListener('close', () => { if (dialog.returnValue === 'delete') { photos = photos.filter(p => p.id !== photo.id); suggestions.delete(photo.id); changed(); render(); } }, { once: true });
       dialog.showModal();
     };
     $('#photo-list').append(card);
@@ -150,9 +208,9 @@ $('#files').onchange = async event => {
       try { [resolved] = await photoURLs([photo], client); } catch (error) { await cleanFiles([path]); throw error; }
       photos.push(resolved); added++; changed();
     }
-    status(`${added} photo${added === 1 ? '' : 's'} added. Use “Suggest with AI” or edit the details yourself, then save to publish.`);
+    status(`${added} photo${added === 1 ? '' : 's'} added. Use “Suggest for batch” for your new uploads, or edit the details yourself, then save to publish.`);
   } catch (error) { status(`${added ? `${added} uploaded. ` : ''}${error.message}`, true); }
-  finally { event.target.value = ''; lock(false); render(); }
+  finally { event.target.value = ''; if (added) $('#ai-scope').value = 'new'; lock(false); render(); }
 };
 $('#save').onclick = async () => {
   if (!$('#workspace').querySelectorAll('input:invalid,textarea:invalid').length) {
