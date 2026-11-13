@@ -1,4 +1,4 @@
-import { publicGallery, imageStyle } from './lib/photos.js?v=20261113-speed';
+import { publicGallery, imageStyle } from './lib/photos.js?v=20261114-delivery';
 
 const dialog = document.createElement('dialog');
 dialog.className = 'photo-viewer';

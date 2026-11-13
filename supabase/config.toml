@@ -2,3 +2,7 @@
 # This project's login tokens work with the gateway verifier. The handler also
 # validates the session with Supabase Auth and checks photo admin membership.
 verify_jwt = true
+
+[functions.photo-gallery]
+# Validates the project publishable key itself; upstream calls use anonymous RLS.
+verify_jwt = false

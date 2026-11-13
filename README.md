@@ -45,6 +45,18 @@ For an existing photo service, run `supabase/photo-optimization.sql` once before
 
 Visitors load preview images in the gallery and the larger optimized image in the viewer and cover. Public pages use anonymous RPC/signing requests without the admin SDK or the admin session. The homepage signs only its featured photos and cover. Gallery metadata is always fetched fresh, so hiding/deleting photos does not reuse a cached gallery. Signed links retain the existing one-hour lifetime. Uploaded files are kept private until you save. Discarding edits or logging out removes unsaved uploads. Closing a tab with unsaved uploads may leave an unreferenced private file in the bucket; it is never listed publicly. Delete removes photo records when saved and then cleans up their uploaded files. Existing source assets are retained. Saves are transactional, and a revision check stops one admin session from overwriting newer changes from another.
 
+### Faster public photo delivery
+
+`supabase/functions/photo-gallery/` combines the public gallery read and download-link signing into one browser GET. It uses only the project's injected publishable/anonymous key, never a service-role key or a visitor's login. The private bucket and existing database/storage access rules stay in place; no database migration is needed.
+
+Deploy the `photo-gallery` function with `verify_jwt = false` (as in `supabase/config.toml`). The handler validates a project publishable/anonymous key itself; the browser passes its existing public key as an `apikey` query parameter to avoid a custom-header CORS preflight. It is read-only and always anonymous, including when a signed-in admin visits it. It can only read `read_photo_gallery` and sign published display/preview paths supplied by that RPC; it cannot read the admin gallery, accept arbitrary paths, modify photos, or expose original source paths. Supabase injects `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEYS` (or the legacy `SUPABASE_ANON_KEY`), so it needs no new secret.
+
+Before enabling it, test `/functions/v1/photo-gallery?view=home` and `?view=journal` with the public `apikey` query parameter and no user session. Check that published photos/captions match the current journal, hidden photos are absent, responses have `Cache-Control: no-store`, and links load. Then add `fastGallery: true` to `PHOTO_CONFIG`, update the gallery/module version URLs in the public HTML and `gallery.js`, publish, and purge the changed website files from Cloudflare. Until the flag is enabled, the website uses the existing anonymous RPC/signing route without an extra function request. If an enabled function fails, the client falls back to a fresh anonymous RPC/signing read; it never restores old local gallery contents.
+
+Every request rereads gallery metadata, so changes to visibility, captions, and order are not held in a response cache. Each warm function instance reuses valid download links until five minutes before their existing one-hour expiry. Reusing links avoids repeated signing and permits image cache reuse where the storage plan supports it. No gallery data or admin sessions are cached. Links issued before a photo is hidden retain the existing expiry behavior described above. The response includes `Server-Timing` for the gallery read and signing phases. Measure both cold and warm requests before claiming a speed improvement.
+
+Run `node tests/gallery-delivery.test.mjs` and `node tests/public-gallery.test.mjs` for the delivery/privacy regressions.
+
 The bundled browser library in `vendor/supabase.js` is `@supabase/supabase-js` 2.117.3 (MIT; see `vendor/SUPABASE-LICENSE`). Login sessions use session storage and end when the browser tab closes.
 
 ## AI photo assistant
