@@ -79,3 +79,9 @@ To update the game, copy its `index.html`, `styles.css`, `game-core.js`, and `ga
 Run `node tests/image-upload.test.mjs` for image dimensions, byte budgets, WebP/JPEG fallback, decoding cleanup, actual upload payload selection, and cleanup after partial upload failure. Run `node tests/public-gallery.test.mjs` for anonymous public requests, homepage filtering, preview selection, private-source isolation, and failure behavior. The database permissions suite also tests the optimization migration twice, thumbnail visibility, and original-file privacy.
 
 No Cloudflare cache, proxy, or security settings are changed by these website files. Versioned frontend asset references avoid mixing the new upload/gallery code with older cached copies.
+
+## Removing original backups
+
+Open **Manage photo storage** from the signed-in studio. The review lists original backups and their storage size, and verifies that every affected photo has a stored website image and thumbnail. It protects all paths used by any website image or thumbnail. Deletion requires confirmation, uses the Storage API to remove file bytes, verifies removal, and clears only matching backup references through the existing revision-checked save RPC. It rereads metadata before saving so current captions and visibility are preserved. Future normal uploads already store only the compressed website image and thumbnail.
+
+Run `node tests/backups.test.mjs` for cleanup safeguards, stale-review rejection, original-only deletion, caption preservation, and failed-delete handling.
