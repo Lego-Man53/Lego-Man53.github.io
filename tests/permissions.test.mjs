@@ -21,6 +21,8 @@ await db.exec(`
 const schema = await readFile(new URL('../supabase/setup.sql', import.meta.url), 'utf8');
 await db.exec(schema);
 await db.exec(schema); // Setup is repeatable.
+const migration = await readFile(new URL('../supabase/photo-optimization.sql', import.meta.url), 'utf8');
+await db.exec(migration); await db.exec(migration);
 await db.exec("insert into public.photo_admins values('11111111-1111-4111-8111-111111111111')");
 const login = async (role, id = '') => {
   await db.exec('reset role');
@@ -57,14 +59,24 @@ assert.equal((await gallery()).photos.length, 3);
 assert.equal((await db.query('select * from storage.objects')).rows.length, 0, 'Hidden storage is not readable');
 await login('authenticated', '11111111-1111-4111-8111-111111111111');
 photos[4].visible = true;
+photos[4].preview_path = '44444444-4444-4444-8444-444444444444.webp';
+photos[4].source_path = '55555555-5555-4555-8555-555555555555.jpg';
+photos[4].pixel_width = 2048; photos[4].pixel_height = 1365;
+await db.query("insert into storage.objects values(gen_random_uuid(),'44444444-4444-4444-8444-444444444444.webp','photos'),(gen_random_uuid(),'55555555-5555-4555-8555-555555555555.jpg','photos')");
 await save(photos, 1);
 await login('anon');
 assert.equal((await gallery()).photos.length, 4);
-assert.equal((await db.query('select * from storage.objects')).rows.length, 1, 'Published storage is readable');
+assert.equal((await db.query('select * from storage.objects')).rows.length, 2, 'Published display and thumbnail are readable, but the source stays private');
+assert.ok((await gallery()).photos.every(photo => !('source_path' in photo)), 'Public RPC does not expose private source paths');
 await db.query('delete from storage.objects');
 await login('authenticated', '11111111-1111-4111-8111-111111111111');
-assert.equal((await db.query('select * from storage.objects')).rows.length, 1, 'Visitors cannot delete storage');
-await save([], 2);
+assert.equal((await db.query('select * from storage.objects')).rows.length, 3, 'Visitors cannot delete storage');
+photos[4].visible = false;
+await save(photos, 2);
+await login('anon');
+assert.equal((await db.query('select * from storage.objects')).rows.length, 0, 'Hiding a photo hides its thumbnail too');
+await login('authenticated', '11111111-1111-4111-8111-111111111111');
+await save([], 3);
 await db.query('delete from storage.objects');
 await db.exec('reset role');
 await db.exec(schema);

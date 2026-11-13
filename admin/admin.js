@@ -1,14 +1,15 @@
-import { getClient, check, photoURLs, arrange, validatePhoto, imageStyle } from '../lib/photos.js?v=20261011-30mb';
+import { getClient, check, photoURLs, arrange, validatePhoto, imageStyle, photoPaths } from '../lib/photos.js?v=20261113-speed';
+import { preparePhoto, uploadPrepared } from '../lib/image-upload.js?v=20261113-speed';
 import { invokeAI, photoPreview, suggestBatch } from './ai.js?v=20261011-batch';
 
 const $ = selector => document.querySelector(selector);
 const status = (message = '', error = false) => { $('#status').textContent = message; $('#status').dataset.error = error; };
 let client, photos = [], settings, snapshot, dirty = false, busy = false, pendingUploads = new Set(), cleanupQueue = new Set();
-let aiReady = false;
+let aiReady = false, variantsReady = false;
 let stopBatch = false;
 const suggestions = new Map();
 const shapeNames = { portrait: 'Portrait · 4:5', landscape: 'Landscape · 3:2', square: 'Square · 1:1', original: 'Original proportions' };
-const serializable = () => photos.map(({ url, ...photo }, sort_order) => ({ ...photo, sort_order }));
+const serializable = () => photos.map(({ url, preview_url, ...photo }, sort_order) => ({ ...photo, sort_order }));
 function changed() { dirty = true; $('#save').disabled = busy; $('#discard').disabled = busy; }
 function lock(value) {
   busy = value;
@@ -17,6 +18,7 @@ function lock(value) {
   $('#save').disabled = value || !dirty;
   $('#discard').disabled = value || !dirty;
   renderBatchControls();
+  $('#optimize').disabled = value || !variantsReady || !photos.some(photo => !photo.preview_path);
 }
 function batchPhotos() {
   return photos.filter(photo => !suggestions.has(photo.id) && ($('#ai-scope').value !== 'new' || pendingUploads.has(photo.storage_path)));
@@ -40,7 +42,7 @@ async function cleanFiles(paths) {
 async function load() {
   const data = check(await client.rpc('read_photo_admin'));
   const resolved = await photoURLs(data.photos, client);
-  photos = resolved; settings = data.settings; suggestions.clear();
+  photos = resolved; settings = data.settings; variantsReady = data.image_variants === true; suggestions.clear();
   snapshot = structuredClone({ photos, settings }); dirty = false;
   $('#login').hidden = true; $('#workspace').hidden = false; $('#logout').hidden = false; $('#counts').hidden = false;
   render();
@@ -149,7 +151,7 @@ function render() {
   photos.forEach((photo, index) => {
     const card = document.createElement('article'); card.className = 'edit-card';
     card.innerHTML = '<div class="edit-preview"><img alt=""><span class="photo-state"></span></div><div class="edit-fields"><label>Title<input data-field="title" maxlength="160" required></label><label>Description for accessibility<input data-field="alt" maxlength="500" required></label><label>Caption<textarea data-field="caption" maxlength="2000" rows="2"></textarea></label><div class="check-row"><label><input data-field="visible" type="checkbox">Visible</label><label><input data-field="homepage" type="checkbox">On homepage</label></div><label>Display shape<select data-field="aspect"><option value="portrait">Portrait</option><option value="landscape">Landscape</option><option value="square">Square</option><option value="original">Original proportions</option></select></label><div class="field-pair"><label class="focal-control">Crop: left ↔ right<input data-field="focal_x" type="range" min="0" max="100"></label><label class="focal-control">Crop: top ↔ bottom<input data-field="focal_y" type="range" min="0" max="100"></label></div><div class="card-actions"><div><button data-action="up" aria-label="Move photo earlier">↑</button> <button data-action="down" aria-label="Move photo later">↓</button></div><button data-action="delete" class="danger">Delete</button></div></div>';
-    const image = card.querySelector('img'); image.src = photo.url; image.alt = photo.alt; image.style.objectPosition = imageStyle(photo);
+    const image = card.querySelector('img'); image.src = photo.preview_url || photo.url; image.loading = 'lazy'; image.decoding = 'async'; image.alt = photo.alt; image.style.objectPosition = imageStyle(photo);
     const aiActions = document.createElement('div'); aiActions.className = 'photo-ai-actions';
     const suggest = document.createElement('button'); suggest.dataset.action = 'suggest'; suggest.className = 'ai-button'; suggest.textContent = '✦ Suggest with AI'; suggest.disabled = !aiReady;
     suggest.onclick = () => suggestPhoto(photo);
@@ -196,21 +198,56 @@ $('#files').onchange = async event => {
   try {
     files.forEach(validatePhoto);
     for (const file of files) {
-      status(`Uploading ${added + 1} of ${files.length}: ${file.name}`);
-      const bitmap = await createImageBitmap(file); const aspect = bitmap.width > bitmap.height ? 'landscape' : 'portrait'; bitmap.close();
-      const id = crypto.randomUUID(); const extension = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/avif': 'avif' }[file.type];
-      const path = `${id}.${extension}`;
-      check(await client.storage.from('photos').upload(path, file, { contentType: file.type, cacheControl: '3600', upsert: false }));
-      pendingUploads.add(path);
+      status(`Preparing ${added + 1} of ${files.length}: ${file.name}…`);
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      const prepared = await preparePhoto(file);
+      status(`Uploading ${added + 1} of ${files.length}: ${file.name}…`);
+      let upload;
+      try { upload = await uploadPrepared(client.storage.from('photos'), prepared, { variants: variantsReady }); }
+      catch (error) { error.cleanupPaths?.forEach(path => pendingUploads.add(path)); if (error.cleanupPaths?.length) changed(); throw error; }
+      upload.paths.forEach(path => pendingUploads.add(path));
+      const id = crypto.randomUUID();
+      const { paths, ...stored } = upload;
       const name = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ').trim().slice(0, 160) || 'Untitled photograph';
-      const photo = { id, storage_path: path, local_path: null, title: name, alt: name, caption: '', visible: true, homepage: false, aspect, focal_x: 50, focal_y: 50, sort_order: photos.length };
+      const photo = { id, ...stored, local_path: null, title: name, alt: name, caption: '', visible: true, homepage: false, aspect: prepared.aspect, focal_x: 50, focal_y: 50, sort_order: photos.length };
       let resolved;
-      try { [resolved] = await photoURLs([photo], client); } catch (error) { await cleanFiles([path]); throw error; }
+      try { [resolved] = await photoURLs([photo], client); } catch (error) { await cleanFiles(paths); throw error; }
       photos.push(resolved); added++; changed();
     }
     status(`${added} photo${added === 1 ? '' : 's'} added. Use “Suggest for batch” for your new uploads, or edit the details yourself, then save to publish.`);
   } catch (error) { status(`${added ? `${added} uploaded. ` : ''}${error.message}`, true); }
   finally { event.target.value = ''; if (added) $('#ai-scope').value = 'new'; lock(false); render(); }
+};
+// Existing uploads are migrated through the same draft/save workflow. Their
+// original private object is retained as source_path; nothing is published here.
+$('#optimize').onclick = async () => {
+  const queue = photos.filter(photo => !photo.preview_path);
+  if (busy || !variantsReady || !queue.length) return;
+  lock(true); let completed = 0, inputBytes = 0, outputBytes = 0;
+  try {
+    for (const photo of queue) {
+      status(`Preparing smaller copies: ${completed + 1} of ${queue.length}…`);
+      const response = await fetch(photo.url);
+      if (!response.ok) throw new Error('A photo could not be downloaded. Refresh the studio and try again.');
+      const blob = await response.blob();
+      const file = new File([blob], photo.title, { type: blob.type });
+      const prepared = await preparePhoto(file);
+      let upload;
+      try { upload = await uploadPrepared(client.storage.from('photos'), prepared); }
+      catch (error) { error.cleanupPaths?.forEach(path => pendingUploads.add(path)); if (error.cleanupPaths?.length) changed(); throw error; }
+      upload.paths.forEach(path => pendingUploads.add(path));
+      const { paths, ...stored } = upload;
+      const next = { ...photo, ...stored, source_path: photo.source_path || photo.storage_path || null, local_path: null };
+      let resolved;
+      try { [resolved] = await photoURLs([next], client); }
+      catch (error) { await cleanFiles(paths); throw error; }
+      Object.assign(photo, resolved); completed++; changed();
+      inputBytes += file.size; outputBytes += prepared.display.blob.size + prepared.preview.blob.size;
+    }
+    const reduction = inputBytes ? Math.max(0, Math.round((1 - outputBytes / inputBytes) * 100)) : 0;
+    status(`${completed} photos prepared${reduction ? ` · ${reduction}% less image data` : ''}. Save changes to publish the faster copies.`);
+  } catch (error) { status(`${completed ? `${completed} photos prepared. ` : ''}${error.message} Save your completed changes or discard them.`, true); }
+  finally { lock(false); render(); }
 };
 $('#save').onclick = async () => {
   if (!$('#workspace').querySelectorAll('input:invalid,textarea:invalid').length) {
@@ -221,8 +258,8 @@ $('#save').onclick = async () => {
   try {
     const data = check(await client.rpc('save_photo_gallery', { photo_rows: serializable(), gallery_settings: { layout: settings.layout, columns: settings.columns, hero_id: settings.hero_id }, expected_revision: snapshot.settings.revision }));
     saved = true;
-    const live = new Set(photos.map(p => p.storage_path).filter(Boolean));
-    const removed = [...new Set([...snapshot.photos.map(p => p.storage_path).filter(Boolean), ...pendingUploads, ...cleanupQueue])].filter(path => !live.has(path));
+    const live = new Set(photos.flatMap(photoPaths));
+    const removed = [...new Set([...snapshot.photos.flatMap(photoPaths), ...pendingUploads, ...cleanupQueue])].filter(path => !live.has(path));
     removed.forEach(path => cleanupQueue.add(path));
     live.forEach(path => pendingUploads.delete(path));
     settings.revision = data.revision; snapshot = structuredClone({ photos, settings }); dirty = false;

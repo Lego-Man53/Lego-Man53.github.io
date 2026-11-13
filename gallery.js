@@ -1,4 +1,4 @@
-import { publicGallery, imageStyle } from './lib/photos.js';
+import { publicGallery, imageStyle } from './lib/photos.js?v=20261113-speed';
 
 const dialog = document.createElement('dialog');
 dialog.className = 'photo-viewer';
@@ -37,7 +37,9 @@ export function renderPhotos(container, photos, settings, homepage = false) {
     button.dataset.aspect = photo.aspect;
     button.setAttribute('aria-label', `View ${photo.title}`);
     const img = document.createElement('img');
-    img.src = photo.url;
+    img.src = photo.preview_url || photo.url;
+    img.decoding = 'async';
+    if (photo.pixel_width && photo.pixel_height) { img.width = photo.pixel_width; img.height = photo.pixel_height; }
     img.alt = photo.alt || photo.title;
     img.loading = 'lazy';
     img.style.objectPosition = imageStyle(photo);
@@ -56,7 +58,7 @@ async function load() {
   const home = document.querySelector('#home-photos');
   const status = document.querySelector('#gallery-status');
   try {
-    const { photos, settings } = await publicGallery(journal ? '../' : './');
+    const { photos, settings } = await publicGallery(journal ? '../' : './', { homepage: Boolean(home) });
     if (journal) {
       renderPhotos(journal, photos, settings);
       status.textContent = photos.length ? '' : 'New photographs are on their way.';
@@ -66,7 +68,7 @@ async function load() {
       const hero = photos.find(p => p.id === settings.hero_id);
       const figure = document.querySelector('.hero-photo');
       figure.hidden = !hero;
-      if (hero) { const img = figure.querySelector('img'); img.src = hero.url; img.alt = hero.alt || hero.title; img.style.objectPosition = imageStyle(hero); }
+      if (hero) { const img = figure.querySelector('img'); img.src = hero.url; img.decoding = 'async'; img.alt = hero.alt || hero.title; img.style.objectPosition = imageStyle(hero); }
     }
   } catch (error) {
     if (status) status.textContent = 'The photo journal is temporarily unavailable. Please try again shortly.';

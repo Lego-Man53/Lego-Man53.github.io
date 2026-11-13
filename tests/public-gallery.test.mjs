@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import { publicGallery, photoPaths, photoURLs } from '../lib/photos.js';
+globalThis.window={PHOTO_CONFIG:{url:'https://test.supabase.co',publishableKey:'public-test-key'}};
+const rows=[{id:'cover',storage_path:'cover.webp',preview_path:'cover-small.webp',homepage:false},{id:'home',storage_path:'home.webp',preview_path:'home-small.webp',homepage:true},{id:'journal-only',storage_path:'other.jpg',homepage:false}];
+const calls=[];
+globalThis.fetch=async (url,options)=>{
+ calls.push({url,options});
+ assert.equal(options.headers.apikey,'public-test-key');assert.equal(options.headers.Authorization,undefined,'Public requests must never reuse an admin session');
+ if(url.includes('/rpc/'))return Response.json({photos:rows,settings:{hero_id:'cover'}});
+ const paths=JSON.parse(options.body).paths;return Response.json(paths.map(path=>({path,signedURL:`/object/sign/photos/${path}?token=public`})));};
+const home=await publicGallery('./',{homepage:true});assert.equal(home.photos.length,2);assert.equal(calls.length,2);
+assert.deepEqual(JSON.parse(calls[1].options.body).paths,['cover.webp','cover-small.webp','home.webp','home-small.webp'],'Homepage does not sign every journal image');
+assert.equal(home.photos[0].preview_url,'https://test.supabase.co/storage/v1/object/sign/photos/cover-small.webp?token=public');
+assert.equal(home.photos[0].url,'https://test.supabase.co/storage/v1/object/sign/photos/cover.webp?token=public');
+assert.deepEqual(photoPaths({storage_path:'main',preview_path:'thumb',source_path:'original'}),['main','thumb','original']);
+let requested;
+await photoURLs([{storage_path:'main',preview_path:'thumb',source_path:'original'}],{storage:{from(){return {async createSignedUrls(paths){requested=paths;return {data:paths.map(path=>({path,signedUrl:path}))};}};}}});
+assert.deepEqual(requested,['main','thumb'],'Viewing a photo does not sign preserved original files');
+globalThis.fetch=async()=>Response.json({photos:[],settings:{hero_id:null}});assert.deepEqual((await publicGallery()).photos,[],'An empty gallery stays empty');
+globalThis.fetch=async()=>new Response('offline',{status:503});await assert.rejects(publicGallery(),/unavailable/,'Service failures must never resurrect hidden local photos');
+window.PHOTO_CONFIG={};const local=await publicGallery('../');assert.ok(local.photos.every(p=>p.url.endsWith('-display.webp')&&p.preview_url.endsWith('-preview.webp')));
+console.log('Public request size, private-source isolation, thumbnail selection, empty galleries, and failure behavior passed.');
